@@ -1,9 +1,25 @@
 import { useState, useEffect } from 'react'
+import { BrowserRouter, Route, Routes } from "react-router"
+import { 
+  ComposedChart, 
+  Bar, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer 
+} from 'recharts';
+import Sidebar from './components/Sidebar';
+import DashboardView from './pages/DashboardView';
+import DayDetailView from './pages/DayDetailView';
 import './App.css'
 
 function App() {
   const [weatherData, setWeatherData] = useState([])
   const [loading, setLoading] = useState(false)
+  const [rawApiHourlyPayload, setRawApiHourlyPayload] = useState(null);
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('All')
@@ -15,7 +31,7 @@ function App() {
         
         // This URL contains exactly the variables checked in your screenshot image
         const response = await fetch(
-          'https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&daily=precipitation_sum,precipitation_hours,precipitation_probability_max,rain_sum,showers_sum&timezone=America%2FLos_Angeles&forecast_days=14&wind_speed_unit=mph&temperature_unit=fahrenheit&precipitation_unit=inch'
+          'https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&daily=rain_sum,showers_sum,precipitation_sum,precipitation_hours,precipitation_probability_max&hourly=dew_point_2m,relative_humidity_2m,precipitation&timezone=America%2FLos_Angeles&forecast_days=14'
         );
         
         if (!response.ok) throw new Error('Could not connect to Open-Meteo API');
@@ -51,6 +67,7 @@ function App() {
         });
 
         setWeatherData(formattedDays);
+        setRawApiHourlyPayload(data.hourly);
         setLoading(false);
       } catch (err) {
         setError(err.message);
@@ -91,105 +108,42 @@ function App() {
   if (loading) return <div className="loading-screen">Reading Your Custom Open-Meteo Variables...</div>;
   if (error) return <div className="error-screen">Error: {error}</div>;
 
-  const getBadgeClass = (category) => {
-    if (category === 'Rainy Day') return 'badge-heavy';
-    if (category === 'Brief Showers') return 'badge-light';
-    return 'badge-dry';
-  };
 
   return (
-    <div className="dashboard-container">
-      <h2 className="dashboard-title">📊 Advanced Rain Analytics Dashboard</h2>
+    <BrowserRouter>
+      <div style={{ display: 'flex', minHeight: '100vh', width: '100vw', overflowX: 'hidden' }}>
+        
+        {/* Persistent Sidebar stays on screen everywhere */}
+        <Sidebar weatherData={weatherData} />
 
-      {/* Control Filters */}
-      <div className="controls-row">
-        <div className="input-group">
-          <label className="filter-label">Search Day Name (Text Filter):</label>
-          <input
-            type="text"
-            placeholder="e.g., Tuesday"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
-          />
-        </div>
-
-        <div className="input-group">
-          <label className="filter-label">Filter by Storm Duration Category:</label>
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="category-select"
-          >
-            <option value="All">All Durations</option>
-            <option value="No Rain">No Rain (0 hrs)</option>
-            <option value="Brief Showers">Brief Showers (1-3 hrs)</option>
-            <option value="Rainy Day">Rainy Day (&gt;3 hrs)</option>
-          </select>
+        {/* View Switcher Window */}
+        <div style={{ flex: 1, overflowY: 'auto', backgroundColor: '#fff' }}>
+          <Routes>
+            <Route 
+              path="/" 
+              element={
+                <DashboardView 
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  categoryFilter={categoryFilter}
+                  setCategoryFilter={setCategoryFilter}
+                  filteredData={filteredData}
+                  totalCount={totalCount}
+                  averageRainChance={averageRainChance}
+                  maxContinuousRain={maxContinuousRain}
+                  totalRainHours={totalRainHours}
+                />
+              } 
+            />
+            <Route 
+              path="/day/:dayId" 
+              element={<DayDetailView weatherData={weatherData} rawApiHourlyPayload={rawApiHourlyPayload} />} 
+            />
+          </Routes>
         </div>
       </div>
-
-      {/* Summary Statistics Display (3 Unique Items) */}
-      <div className="stats-container">
-        <div className="stat-card">
-          <h3>Filtered Days Count</h3>
-          <p className="stat-value">{totalCount}</p>
-        </div>
-        <div className="stat-card">
-          <h3>Avg Rain Probability</h3>
-          <p className="stat-value">{averageRainChance}%</p>
-        </div>
-        <div className="stat-card">
-          <h3>Peak Continuous Rain</h3>
-          <p className="stat-value">{maxContinuousRain} in</p>
-        </div>
-        <div className="stat-card">
-          <h3>Total Rain Hours</h3>
-          <p className="stat-value">{totalRainHours} hrs</p>
-        </div>
-      </div>
-
-      {/* Main Dashboard Grid */}
-      <table className="weather-table">
-        <thead>
-          <tr className="table-header-row">
-            <th className="table-header">Date</th>
-            <th className="table-header">Day</th>
-            <th className="table-header">Total Precip (Sum)</th>
-            <th className="table-header">Steady Rain</th>
-            <th className="table-header">Sudden Showers</th>
-            <th className="table-header">Rain Duration</th>
-            <th className="table-header">Probability Max</th>
-            <th className="table-header">Duration Classification</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredData.length > 0 ? (
-            filteredData.map((row) => (
-              <tr key={row.id} className="table-row">
-                <td className="table-data">{row.date}</td>
-                <td className="table-data"><strong>{row.dayName}</strong></td>
-                <td className="table-data">{row.precipSum} in</td>
-                <td className="table-data">{row.rainSum} in</td>
-                <td className="table-data">{row.showersSum} in</td>
-                <td className="table-data">{row.precipHours} hrs</td>
-                <td className="table-data">{row.rainChance}%</td>
-                <td className="table-data">
-                  <span className={`condition-badge ${getBadgeClass(row.category)}`}>
-                    {row.category}
-                  </span>
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan="8" className="no-results">No weather records match your combined filters.</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+    </BrowserRouter>
   );
 }
 
-export default App
+export default App;
