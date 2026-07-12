@@ -38,7 +38,8 @@ The following **additional** features are implemented:
 
 Here's a walkthrough of implemented user stories:
 
-<img width="2394" height="1496" title='Video Walkthrough' alt="project6second_gif" src="https://github.com/user-attachments/assets/46193f2a-7671-4e0e-a4a9-8c22d6b38f5e" />
+<img width="2394" height="1569" title='Video Walkthrough' alt="project6third_gif" src="https://github.com/user-attachments/assets/81ddf527-84a4-4394-a2af-9709ea974d11" />
+
 
 <!-- Replace this with whatever GIF tool you used! -->
 GIF created with ScreenToGif  
